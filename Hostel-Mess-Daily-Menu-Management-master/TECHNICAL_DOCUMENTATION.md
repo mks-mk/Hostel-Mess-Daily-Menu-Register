@@ -3,7 +3,7 @@
 **Academic Program:** B.Tech Computer Science and Engineering (Semester 3)  
 **Subject:** Object-Oriented Programming with Java Lab  
 **Application Type:** Dual-Interface Desktop (Java Swing) & Cloud-Hosted Web Application  
-**GitHub Repository:** [https://github.com/athulya2000/Hostel-Mess-Daily-Menu-Management](https://github.com/athulya2000/Hostel-Mess-Daily-Menu-Management)  
+**GitHub Repository:** [https://github.com/mks-mk/Hostel-Mess-Daily-Menu-Register.git](https://github.com/mks-mk/Hostel-Mess-Daily-Menu-Register.git)  
 **Live Cloud Deployment:** [https://hostel-mess-daily-menu-management-1.onrender.com](https://hostel-mess-daily-menu-management-1.onrender.com)  
 
 ---
@@ -16,7 +16,7 @@ In traditional student hostels, daily mess menus, special meals, and meal timing
 * **No Unified Access:** Students have to physically visit the dining hall to check the menu, causing crowding during peak hours.
 
 ### Solution Overview
-The **Hostel Mess Daily Menu Management System** is a robust, full-stack Java application engineered to digitize meal registers. It offers:
+The **Hostel Mess Daily Menu Management Register** is a robust, full-stack Java application engineered to digitize meal registers. It offers:
 1. **Desktop Client/Admin Dashboard (Java Swing GUI):** A unified two-tab desktop application for mess supervisors and administrators with full CRUD capabilities, pagination, and real-time alerts.
 2. **Zero-Dependency Cloud-Hosted Web Application:** Built directly using Java's built-in `com.sun.net.httpserver.HttpServer`, serving responsive modern web interfaces for both hostellers and mess staff without requiring external servlet containers like Tomcat.
 3. **Resilient Dual-Mode Database Architecture:** Automatically interfaces with **MySQL (XAMPP)** during local execution and seamlessly fails over to an embedded **SQLite** engine (`hostel_mess.db`) when deployed to cloud environments.
@@ -228,7 +228,7 @@ The application includes an automated test harness (`TestVerification.java`) ver
 
 ## 8. Summary of Academic Learning Outcomes
 
-Through the development and submission of this project, the following core Computer Science competencies were mastered:
+Through the development and submission of this project, the following core Computer Science competencies were studied:
 1. **Object-Oriented Programming:** Implementation of inheritance (`BaseEntity` base class), encapsulation (private attributes, validated getters/setters), polymorphism (interface-driven DAOs), and abstraction.
 2. **Graphical User Interfaces:** Layout managers (`BorderLayout`, `GridBagLayout`), custom table models, event listener architectures, and EDT concurrency safety.
 3. **Database Connectivity:** JDBC connection pooling, precompiled statements, SQL injection resilience, and multi-dialect compatibility (MySQL + SQLite).
