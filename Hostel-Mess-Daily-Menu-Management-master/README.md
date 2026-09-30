@@ -76,4 +76,12 @@ run.ps1                PowerShell desktop launcher
 Dockerfile             Headless web-server container
 ```
 
+## Team Members
+| Name | Register Number |
+|---|---|
+| MOHAMMED SINAN MK | MEA25CS091 |
+| SHIVAK V | MEA25CS123 |
+| SHARIQUE MOHAMMED P | 26MLCS06 |
+
+
 For implementation details and more, see [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md).
