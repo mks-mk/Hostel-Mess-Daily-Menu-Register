@@ -1,236 +1,271 @@
-# TECHNICAL DOCUMENTATION: HOSTEL MESS DAILY MENU MANAGEMENT SYSTEM
+# Technical Documentation
+## Hostel Mess Daily Menu Register
 
-**Academic Program:** B.Tech Computer Science and Engineering (Semester 3)  
-**Subject:** Object-Oriented Programming with Java Lab  
-**Application Type:** Dual-Interface Desktop (Java Swing) & Cloud-Hosted Web Application  
-**GitHub Repository:** [https://github.com/mks-mk/Hostel-Mess-Daily-Menu-Register.git](https://github.com/mks-mk/Hostel-Mess-Daily-Menu-Register.git)  
-**Live Cloud Deployment:** [https://hostel-mess-daily-menu-management-1.onrender.com](https://hostel-mess-daily-menu-management-1.onrender.com)  
+### 1. Project Overview
 
----
+- **Problem statement:** Mess menus are often shared through paper notices or boards. These are inconvenient to update and difficult for residents to check remotely.
+- **Background:** This project provides a digital weekly menu register for hostel mess staff and residents.
+- **Purpose:** Allow an administrator to maintain menu records and allow residents to view the menu by day through a desktop or browser interface.
 
-## 1. Executive Summary & Problem Definition
+### 2. Objectives
 
-In traditional student hostels, daily mess menus, special meals, and meal timings are communicated through physical whiteboards or static paper charts. This introduces several recurring issues:
-* **Lack of Real-Time Information:** Changes due to ingredient availability are difficult to broadcast promptly to hundreds of hostellers.
-* **Manual Record Inefficiency:** Adding, editing, and archiving meal records requires error-prone manual bookkeeping.
-* **No Unified Access:** Students have to physically visit the dining hall to check the menu, causing crowding during peak hours.
+- **Main objectives:** Accept and manage menu information, save it in a database, and retrieve it for display and search.
+- **Expected outcomes:** Administrators can add, edit, and delete menu items. Residents can view meals for a selected day, including dish descriptions, categories, and extra costs when applicable.
 
-### Solution Overview
-The **Hostel Mess Daily Menu Management Register** is a robust, full-stack Java application engineered to digitize meal registers. It offers:
-1. **Desktop Client/Admin Dashboard (Java Swing GUI):** A unified two-tab desktop application for mess supervisors and administrators with full CRUD capabilities, pagination, and real-time alerts.
-2. **Zero-Dependency Cloud-Hosted Web Application:** Built directly using Java's built-in `com.sun.net.httpserver.HttpServer`, serving responsive modern web interfaces for both hostellers and mess staff without requiring external servlet containers like Tomcat.
-3. **Resilient Dual-Mode Database Architecture:** Automatically interfaces with **MySQL (XAMPP)** during local execution and seamlessly fails over to an embedded **SQLite** engine (`hostel_mess.db`) when deployed to cloud environments.
+### 3. Requirements
 
----
+#### Functional Requirements
 
-## 2. Technology Stack & Technical Specifications
+- Accept menu details through the desktop admin form: day, meal type, dish name, category, description or side dishes, extra cost, and availability.
+- Validate that a dish name is present and that the extra cost is numeric in the desktop form.
+- Store multiple menu records persistently in MySQL or SQLite. The application does not impose a fixed menu-record limit; practical capacity depends on the selected database.
+- Create, read, update, and delete menu records.
+- Filter menu records by day and meal, and search by dish name, category, description, or day.
+- Display matching menu records in the desktop and web interfaces and report admin operation status.
+- Define database tables and DAO operations for notices and feedback. These are not integrated as user-facing workflows in the main menu interface.
 
-| Component | Technology / Library | Purpose |
-| :--- | :--- | :--- |
-| **Language & Runtime** | Java SE 17 (LTS) | Core application logic, OOP implementation, concurrency |
-| **GUI Framework** | Java Swing & AWT (`javax.swing`, `java.awt`) | Multi-tab desktop user interface, table pagination, dialogs |
-| **Database Engines** | MySQL 8.x / MariaDB (XAMPP) & SQLite 3.x | Persistent relational storage for menus, feedback, and notices |
-| **Database Connectivity**| JDBC API with `PreparedStatement` | Secure SQL execution and SQL injection defense |
-| **Embedded Web Server** | `com.sun.net.httpserver.HttpServer` | Built-in HTTP micro-server serving live HTML/CSS endpoints |
-| **Containerization** | Docker (`eclipse-temurin:17-jdk-jammy`) | Cloud runtime environment encapsulation |
-| **Cloud Hosting** | Render.com PaaS | Global 24/7 web hosting with dynamic `$PORT` routing |
-| **Version Control** | Git & GitHub | Source tracking, commits, automated cloud builds |
+#### Non-Functional Requirements
 
----
+- **Portability:** Java application; database access is through JDBC. SQLite is available for local use, and a MySQL server can be used instead.
+- **Usability:** Provides a Java Swing desktop interface and a browser-based menu interface.
+- **Maintainability:** Separates model, DAO, database, view, web, utility, and exception code into packages.
+- **Security limitation:** The demonstration admin credentials are hard-coded, and web login uses one in-memory global flag rather than individual sessions. Do not expose the admin interface publicly without replacing this authentication design.
+- **Persistence:** Records survive normal application restarts when the configured database is persistent. A container requires mounted storage if SQLite data must survive container replacement.
 
-## 3. System Architecture & Design Patterns
+### 4. Technology Stack
 
-The project strictly follows professional software engineering architectural paradigms:
+| Technology | Use in this project |
+| --- | --- |
+| Java (JDK 17+) | Application language and runtime; the Dockerfile uses Eclipse Temurin JDK 17. |
+| Swing / AWT | Desktop user interface. |
+| JDBC | Database connectivity and prepared SQL statements. |
+| MySQL | Optional server database; the checked-in configuration selects MySQL at `localhost:3306`. |
+| XAMPP | Optional way to run a local MySQL server; it is not bundled or required by the application. |
+| SQLite | Local file database used when selected or when a MySQL connection fails. |
+| MySQL Connector/J and SQLite JDBC | Database driver JARs in `lib/`. |
+| `com.sun.net.httpserver.HttpServer` | Built-in Java HTTP server for the browser interface. |
+| HTML / CSS | Browser pages generated by the Java web server. |
+| Docker | Optional headless server packaging using the included `Dockerfile`. |
+| Batch / PowerShell | Windows launch scripts. |
 
-```
-                      +-----------------------------------+
-                      |      Main Application Entry       |
-                      |        (com.hostel.mess)          |
-                      +-----------------+-----------------+
-                                        |
-                 +----------------------+----------------------+
-                 |                                             |
-                 v                                             v
-    +--------------------------+                 +---------------------------+
-    | Desktop Presentation GUI |                 |  Embedded HTTP Web Server |
-    |   (Swing EDT Thread)     |                 |  (Port 8080 / Cloud $PORT)|
-    +------------+-------------+                 +-------------+-------------+
-                 |                                             |
-                 +----------------------+----------------------+
-                                        |
-                                        v
-                      +-----------------------------------+
-                      |       Data Access Layer (DAO)     |
-                      |   MenuDAO / FeedbackDAO / Notice  |
-                      +-----------------+-----------------+
-                                        |
-                                        v
-                      +-----------------------------------+
-                      |   Database Manager (Singleton)    |
-                      +--------+-----------------+--------+
-                               |                 |
-                   (Primary)   v                 v  (Fallback)
-                         +-----------+     +------------+
-                         | MySQL DB  |     | SQLite DB  |
-                         |  (XAMPP)  |     | (Embedded) |
-                         +-----------+     +------------+
+### 5. System Architecture
+
+```mermaid
+flowchart TD
+    Resident[Resident] --> Desktop[Desktop menu view]
+    Resident --> Browser[Browser menu]
+    Admin[Administrator] --> AdminUI[Desktop or web admin interface]
+    Desktop --> DAO[DAO interfaces and JDBC implementations]
+    Browser --> Web[HttpServer handlers]
+    AdminUI --> DAO
+    Web --> DAO
+    DAO --> Manager[DatabaseManager]
+    Manager --> MySQL[(MySQL)]
+    Manager --> SQLite[(SQLite file)]
 ```
 
-### Applied Software Design Patterns
-1. **Singleton Design Pattern (`DatabaseManager.java`):**
-   - Guarantees that only a single instance of the database connection manager is instantiated throughout the JVM's lifecycle.
-   - Prevents connection exhaustion, locks, and thread contention.
-2. **Data Access Object (DAO) Pattern (`MenuDAO`, `MenuDAOImpl`):**
-   - Decouples high-level business/presentation logic from low-level database SQL operations.
-   - Enables changing the underlying database engine without modifying the UI layer.
-3. **Model-View-Controller (MVC) Pattern:**
-   - **Model:** Domain entities (`MenuItem`, `Feedback`, `Notice`, `MealType`).
-   - **View:** Swing GUI (`MainAppFrame`, `AdminDashboardFrame`, `StudentPortalFrame`) and HTML templates in `MessWebServer`.
-   - **Controller:** Action listeners, event handlers, and HTTP context handlers (`AdminAddHandler`, `AdminUpdateHandler`, `AdminDeleteHandler`).
-4. **Resilient Failover Strategy:**
-   - On startup, the system attempts a connection to MySQL at `localhost:3306`. If unavailable (e.g. XAMPP not running or deployed on cloud), it automatically activates the embedded SQLite database engine.
+- **Presentation layer:** Swing views display the menu and provide the desktop admin form. The web server generates HTML pages and handles browser requests.
+- **Request and event handling:** Swing action listeners and HTTP handlers collect input and invoke DAO methods. There is no separate service/controller package.
+- **Data access layer:** `MenuDAO`, `NoticeDAO`, and `FeedbackDAO` define operations; their `*DAOImpl` classes execute SQL.
+- **Database layer:** `DatabaseManager` loads configuration, manages the JDBC connection, creates tables, and seeds the initial menu when the menu table is empty.
 
----
+### 6. Project Structure
 
-## 4. Key Functional Modules & Implementation Details
-
-### 4.1. Dual-Tab Unified Desktop Interface
-- **Tab 1: Student / Public Portal:**
-  - Read-only real-time view of daily mess menus.
-  - Interactive day filter with **Monday pre-selected by default**.
-  - Category filters: All, Breakfast, Lunch, Snacks, Dinner, and Chef Specials.
-  - Integrated Student Feedback submission form with star ratings.
-  - Live Notice Board displaying mess announcements.
-- **Tab 2: Admin Management Console:**
-  - Protected by administrative authentication (`admin@gmail.com` / `admin123`).
-  - Full CRUD operations with auto-dismissing notifications.
-  - Dynamic table pagination with page size selector.
-
-### 4.2. Complete CRUD Lifecycle
-* **Create (Add Dish):**
-  - Form inputs: Dish Name, Category (Breakfast, Lunch, Snacks, Dinner), Day (Monday–Sunday), Price (₹), Dietary Type (Veg/Non-Veg), Chef Special flag, and Availability Status.
-  - Validates non-empty names and non-negative numeric pricing.
-  - Displays instant alert: `✔ Dish '<Name>' added successfully! [×]`.
-* **Read (Search & Filter):**
-  - Instant SQL filtering by day of the week and meal type.
-  - Sorted display prioritizing Chef Specials and availability.
-* **Update (Edit Selected Item):**
-  - Selecting any row in the table and clicking **"Edit Selected Item"** loads all existing attributes into the editing form.
-  - Admin modifies desired values and clicks **"Update Item"**.
-  - Displays instant alert: `✔ Dish '<Name>' updated successfully! [×]`.
-* **Delete (Remove Dish):**
-  - Admin selects an item and triggers deletion with a confirmation dialog.
-  - Displays instant alert: `✔ Dish '<Name>' deleted successfully! [×]`.
-
-### 4.3. Dynamic Table Pagination Engine
-To ensure high GUI performance when hundreds of dish records exist:
-* Displays items in structured chunks (10 rows per page on Desktop; 8 rows per page on Web).
-* Controls: **"◀ Previous"**, **"Next ▶"**, and dynamic label: `Page X of Y (Total: N items)`.
-* Automatically recalculates total pages upon filtering or data modifications.
-
-### 4.4. Auto-Dismissing Success Notification Banner
-* Replaces blocking modal popups with a non-intrusive banner.
-* Displays dish-specific confirmation (e.g., `✔ Dish 'Idli Sambar' added successfully!`).
-* Features an explicit manual dismiss button `[×]` and a background timer thread that automatically fades out after 4 seconds.
-
----
-
-## 5. Database Schema & Relational Design
-
-The system manages relational data across three primary tables:
-
-### Table 1: `menu_items`
-```sql
-CREATE TABLE IF NOT EXISTS menu_items (
-    id INTEGER PRIMARY KEY AUTO_INCREMENT, -- (AUTOINCREMENT in SQLite)
-    name VARCHAR(100) NOT NULL,
-    category VARCHAR(20) NOT NULL,         -- BREAKFAST, LUNCH, SNACKS, DINNER
-    day_of_week VARCHAR(15) NOT NULL,      -- Monday through Sunday
-    price DECIMAL(6,2) NOT NULL DEFAULT 0.00,
-    is_veg BOOLEAN NOT NULL DEFAULT 1,
-    is_special BOOLEAN NOT NULL DEFAULT 0,
-    is_available BOOLEAN NOT NULL DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+```text
+src/com/hostel/mess/
+  AppMain.java                 Application startup
+  TestVerification.java        Standalone database/DAO verification harness
+  dao/                         DAO interfaces and JDBC implementations
+  database/DatabaseManager.java Database configuration, connection, and schema setup
+  exception/                   Database and validation exceptions
+  model/                       MenuItem, MealType, Notice, Feedback, BaseEntity
+  util/                        Shared constants and Swing helpers
+  view/                        Swing windows, forms, and dialogs
+  web/MessWebServer.java       HTTP routes and generated browser pages
+lib/                           MySQL, SQLite, and logging JARs
+db.properties                  Database configuration
+run.bat                        Windows desktop launcher
+run_web_browser.bat            Windows launcher that opens the browser menu
+run.ps1                        PowerShell desktop launcher
+Dockerfile                     Headless server container definition
 ```
 
-### Table 2: `feedback`
-```sql
-CREATE TABLE IF NOT EXISTS feedback (
-    id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    student_name VARCHAR(100) NOT NULL,
-    rating INTEGER NOT NULL,               -- 1 to 5 Stars
-    comments TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+Important classes:
+
+| Class | Responsibility |
+| --- | --- |
+| `AppMain` | Initializes the database and web server, then opens the Swing application unless headless/server-only mode is requested. |
+| `MainAppFrame` | Main combined desktop interface, including the resident menu and admin panel. |
+| `MenuItem` | Menu record model; extends `BaseEntity`. |
+| `MenuDAO` / `MenuDAOImpl` | Menu persistence, CRUD, filtering, search, and count operations. |
+| `DatabaseManager` | Singleton database manager; creates the schema and seeds sample menu data. |
+| `MessWebServer` | Serves the public menu and admin HTTP routes. |
+| `TestVerification` | Exercises selected database and DAO operations. |
+
+### 7. Database Design
+
+The application creates the following tables. `id` is the auto-incrementing primary key in each table. There are no foreign-key relationships between these tables.
+
+| Table | Columns |
+| --- | --- |
+| `menu_items` | `id` (PK), `day_of_week`, `meal_type`, `item_name`, `category`, `description`, `extra_cost`, `is_available`, `created_at` |
+| `notices` | `id` (PK), `title`, `content`, `priority`, `is_active`, `created_at` |
+| `feedbacks` | `id` (PK), `student_name`, `room_number`, `meal_type`, `rating`, `comments`, `created_at` |
+
+```mermaid
+erDiagram
+    MENU_ITEMS {
+        INT id PK
+        VARCHAR day_of_week
+        VARCHAR meal_type
+        VARCHAR item_name
+        VARCHAR category
+        TEXT description
+        DOUBLE extra_cost
+        INT is_available
+        TIMESTAMP created_at
+    }
+    NOTICES {
+        INT id PK
+        VARCHAR title
+        TEXT content
+        VARCHAR priority
+        INT is_active
+        TIMESTAMP created_at
+    }
+    FEEDBACKS {
+        INT id PK
+        VARCHAR student_name
+        VARCHAR room_number
+        VARCHAR meal_type
+        INT rating
+        TEXT comments
+        TIMESTAMP created_at
+    }
 ```
 
-### Table 3: `notices`
-```sql
-CREATE TABLE IF NOT EXISTS notices (
-    id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    title VARCHAR(150) NOT NULL,
-    content TEXT NOT NULL,
-    posted_date DATE NOT NULL
-);
+The database manager uses MySQL `INT AUTO_INCREMENT PRIMARY KEY` or SQLite `INTEGER PRIMARY KEY AUTOINCREMENT` syntax. The menu table is seeded with sample records only when it is empty. Configure MySQL/SQLite selection and connection values in `db.properties`; `MYSQL_HOST` and related environment variables can override the MySQL connection settings.
+
+### 8. System Modules
+
+1. **Resident menu module:** Select a day and view the day's meals. The desktop menu also supports dish search.
+2. **Admin menu module:** Authenticate, filter and search records, then add, edit, or delete menu items. The desktop form includes availability; the browser form does not expose every desktop field.
+3. **Database module:** Creates the schema, selects MySQL or SQLite, seeds initial menu data, and persists DAO operations.
+4. **Web module:** Serves the public menu and admin login/menu-management routes over HTTP.
+5. **Notice and feedback data module:** Provides models, tables, and DAO operations. These are present in the source but are not connected to the primary user-facing menu flow.
+
+### 9. Application Workflow
+
+1. An administrator enters or edits menu details in the desktop form or browser admin form.
+2. The desktop form checks for a dish name and parses the extra cost. The web handler also requires a non-empty dish name and parses the cost, defaulting to zero if parsing fails.
+3. The UI or HTTP handler creates a `MenuItem` and calls a menu DAO operation.
+4. The DAO executes a prepared SQL statement through `DatabaseManager` against the selected database.
+5. After successful changes, the desktop interface reloads menu data; web requests redirect to the admin page with a status message.
+6. Resident menu queries retrieve records by day and meal. Search queries match dish name, category, description, or day.
+7. Results are rendered as meal lists/cards in the client interface and as records in the admin table.
+
+### 10. Implementation Details
+
+- **Object-oriented design:** Model fields are encapsulated; `MenuItem`, `Notice`, and `Feedback` inherit shared identity/timestamp behavior from `BaseEntity`. `MealType` is an enum.
+- **Abstraction and polymorphism:** DAO interfaces separate persistence contracts from JDBC implementations. Menu DAO methods provide different read/filter operations.
+- **Singleton:** `DatabaseManager.getInstance()` provides the shared database manager.
+- **JDBC and CRUD:** DAO implementations use JDBC statements and prepared statements for create, read, update, and delete operations. Values supplied to queries are bound as parameters.
+- **Exception handling:** Database operations report failures using `MessDatabaseException`; `ValidationException` is defined for validation-related errors. The UI catches and reports database or input errors.
+- **Validation scope:** Current validation is basic. It does not constitute comprehensive input validation or production-grade security, particularly for browser-submitted values.
+
+### 11. Testing
+
+`TestVerification.java` is a standalone database/DAO harness. The results below describe expected behavior; the actual result is marked not run because the harness has not been executed as part of this documentation update.
+
+| Test case in harness | Expected result | Actual result |
+| --- | --- | --- |
+| Database initialization and menu read | Database connection is available and menu data can be read. The harness expects seeded menu items. | Not run. |
+| Menu search | Searching for `Malabar Chicken` returns a matching menu item when the seeded/test data is present. | Not run. |
+| Menu create, read, update, and delete | A test menu item is inserted, retrieved, updated, and deleted. | Not run. |
+| Notices and feedback DAO operations | Active notices can be retrieved; a feedback row can be inserted and an average rating queried. | Not run. |
+
+Run after compiling, for example after `run.bat` has compiled the project:
+
+```powershell
+java -ea -cp "lib/*;bin" com.hostel.mess.TestVerification
 ```
 
----
+The harness writes a feedback record to the configured database. Use a disposable or backed-up database; do not treat it as a read-only check. Some results are printed rather than asserted by the harness, so a printed `PASS` is not equivalent to comprehensive automated test coverage.
 
-## 6. Cloud Deployment & Container Architecture
+### 12. Setup & Execution
 
-### 6.1. Headless Cloud Detection
-Desktop GUI frameworks (`javax.swing.JFrame`) fail in cloud servers that lack an X11/screen display. The application incorporates intelligent headless detection in `AppMain.java`:
-```java
-if (java.awt.GraphicsEnvironment.isHeadless() || isServerOnlyFlag) {
-    System.out.println("Headless Cloud Server Mode detected: Starting Web Server only.");
-    Thread.currentThread().join(); // Keeps cloud process active indefinitely
-    return;
-}
+**Requirements**
+
+- JDK 17 or later.
+- To use MySQL, a running MySQL server. XAMPP is one optional way to provide it.
+- The required JDBC driver JARs are included in `lib/`.
+
+**Database setup and configuration**
+
+- The checked-in `db.properties` selects MySQL at `localhost:3306`, database `hostel_mess_db`, username `root`, with an empty password.
+- MySQL connection settings can be changed in `db.properties`. If `MYSQL_HOST` is set, the application uses the MySQL environment variables documented in the Database Configuration section of `TECHNICAL_DOCUMENTATION.md`'s source implementation, `DatabaseManager`.
+- To use SQLite directly, set `db.type=sqlite`. The file `hostel_mess.db` is created in the process working directory.
+- If the selected MySQL connection cannot be opened, the application falls back to SQLite.
+- Startup creates the tables automatically and seeds the menu table when it has no records.
+
+**Run on Windows**
+
+```bat
+run.bat
 ```
 
-### 6.2. Dynamic Port Binding
-Cloud platforms like Render assign random port numbers at runtime via the `PORT` environment variable:
-```java
-String envPort = System.getenv("PORT");
-int port = (envPort != null) ? Integer.parseInt(envPort) : 8080;
-server = HttpServer.create(new InetSocketAddress(port), 0);
+Launches the desktop application; the embedded web server also starts. To open the web interface automatically:
+
+```bat
+run_web_browser.bat
 ```
 
-### 6.3. Docker Packaging
-Packaged via an official Eclipse Temurin JDK 17 container:
-```dockerfile
-FROM eclipse-temurin:17-jdk-jammy
-WORKDIR /app
-COPY . .
-RUN mkdir -p bin && javac -encoding UTF-8 -d bin -cp "lib/*" $(find src -name "*.java")
-EXPOSE 8080
-CMD ["java", "-Djava.awt.headless=true", "-cp", "bin:lib/*", "com.hostel.mess.AppMain", "--server-only"]
+The public menu is at `http://localhost:8080/`; the admin page is at `http://localhost:8080/admin`. The PowerShell desktop launcher is `run.ps1`.
+
+**Run with Docker**
+
+```sh
+docker build -t hostel-mess .
+docker run --rm -p 8080:8080 hostel-mess
 ```
 
----
+The container runs in headless server mode. Mount persistent storage if SQLite data must survive container replacement.
 
-## 7. Verification & Testing Results
+### 13. Team Contributions
 
-The application includes an automated test harness (`TestVerification.java`) verifying 7 distinct execution phases:
+Fill in this table with the actual project contributors and their work. No names or registration numbers are present in the source files.
 
-| Phase | Test Description | Expected Result | Status |
-| :---: | :--- | :--- | :---: |
-| 1 | Database Driver & Connection Pool | MySQL or SQLite connection active | **PASSED** |
-| 2 | Table Schema Generation | All 3 tables created / verified | **PASSED** |
-| 3 | DAO Create (Insert Dish) | Auto-generated ID returned | **PASSED** |
-| 4 | DAO Read & Filter (Monday Default) | Correct subset of items returned | **PASSED** |
-| 5 | DAO Update (Modify Dish Details) | Updated fields match database state | **PASSED** |
-| 6 | DAO Pagination Math | Accurate page count and sublist slice | **PASSED** |
-| 7 | DAO Delete (Remove Dish) | Record deleted without foreign key locks | **PASSED** |
+| Name | Register No. | email|
+| --- | --- | --- |
+| MOHAMMED SINAN MK | MEA25CS091 | 25gcs54@meaec.edu.in |
+| SHIVAK V | MEA25CS123 | 25gcs01@gmail.com |
+| SHARIQUE MOHAMMED P | 26MLCS06 | 26mlcs06@meaec.edu.in |
 
----
+### 14. Limitations
 
-## 8. Summary of Academic Learning Outcomes
+- Admin credentials are hard-coded in `AppConstants`.
+- Web admin authentication uses a single process-wide boolean rather than per-user sessions; it is not appropriate for public deployment.
+- The web menu and admin forms do not expose all the same fields as the desktop form.
+- Input validation is limited and should be strengthened, especially for HTTP requests.
+- The database schema has no foreign keys or migration/versioning mechanism.
+- SQLite data in an unmounted Docker container may be lost when the container is replaced.
+- The verification harness writes test data to the configured database and has limited assertions.
 
-Through the development and submission of this project, the following core Computer Science competencies were studied:
-1. **Object-Oriented Programming:** Implementation of inheritance (`BaseEntity` base class), encapsulation (private attributes, validated getters/setters), polymorphism (interface-driven DAOs), and abstraction.
-2. **Graphical User Interfaces:** Layout managers (`BorderLayout`, `GridBagLayout`), custom table models, event listener architectures, and EDT concurrency safety.
-3. **Database Connectivity:** JDBC connection pooling, precompiled statements, SQL injection resilience, and multi-dialect compatibility (MySQL + SQLite).
-4. **Network Programming:** Lightweight HTTP servers, query parameter parsing, session simulation, and RESTful routing.
-5. **Modern DevOps & Cloud Delivery:** Containerization with Docker, Git version control, and production cloud deployment on Render.com.
+### 15. Future Enhancements
+
+- Replace the demonstration login with secure password storage, per-user sessions, and appropriate web security controls.
+- Add comprehensive validation and clearer feedback for invalid browser and desktop input.
+- Complete the notice and feedback user workflows if they are required product features.
+- Add database migrations, backup/restore support, and constraints where appropriate.
+- Improve test isolation so verification can run against a temporary database without modifying user data.
+- Align the desktop and web admin capabilities and add user/role management if needed.
+
+### 16. References
+
+- Project source: `src/com/hostel/mess/`.
+- Database configuration: `db.properties`.
+- Windows launchers: `run.bat`, `run_web_browser.bat`, and `run.ps1`.
+- Container definition: `Dockerfile`.
+- Project setup and launch summary: [README.md](README.md).
+- Java SE 17 API documentation: [https://docs.oracle.com/en/java/javase/17/docs/api/](https://docs.oracle.com/en/java/javase/17/docs/api/).
+- MySQL Connector/J documentation: [https://dev.mysql.com/doc/connector-j/en/](https://dev.mysql.com/doc/connector-j/en/).
